@@ -1,0 +1,20 @@
+
+services:
+  # 1. Il tuo broker Mosquitto (ho mantenuto le tue porte originali)
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+
+  # 2. Il tuo nuovo script Python
+  script-python:
+    build: .
+    container_name: echo-server_python
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - mosquitto
