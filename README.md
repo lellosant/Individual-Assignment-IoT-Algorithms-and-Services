@@ -42,13 +42,13 @@ During testing, I realized that the minimum reliable sampling frequency of the D
 All test signals were generated directly on an ESP32 microcontroller using its built-in 8-bit DAC (GPIO 25), outputting the synthesized waveforms in real-time via a lookup sine table precomputed at startup.
 
 **Clear Signal:**  2\*sin(2\*pi\*3\*t)+4\*sin(2\*pi\*5\*t)   
-![][image1]
+![Clear signal generated][image1]
 
 **Dirty Signal** ( Bonus )  
 2\*sin(2\*pi\*3\*t)+4\*sin(2\*pi\*5\*t) \+ n(t) \+ A(t) where:  
  n(t) is Gaussian noise σ=0.2  
  A(t) is an anomaly injection component with probability p \= 0.02 , large-magnitude outlier \+/- U(5, 15\)   
-**![][image2]**
+**![Dirty signal generated][image2]**
 
 **Other 3 clear signal:**
 
@@ -94,16 +94,16 @@ An additional constraint is that the decimation factor N must be an integer, mea
 
 **Results:**  
  2\*sin(2\*pi\*3\*t)+4\*sin(2\*pi\*5\*t)   
-![][image3]
+![result of the signal 2*sin(2*pi*3*t)+4*sin(2*pi*5*t)][image3]
 
 sin(2π \* 100t) \+ 4 \* sin(2π \* 200t)  
-![][image4]
+![result of the signal sin(2π * 100t) + 4 * sin(2π * 200t)][image4]
 
 sin(2π \* 300t) \+ 4 \* sin(2π \* 500t)  
-![][image5]
+![result of the signal sin(2π * 300t) + 4 * sin(2π * 500t)][image5]
 
 sin(2π \* 1000t) \+ 4 \* sin(2π \* 2000t)  
-![][image6]
+![result of the signal sin(2π * 1000t) + 4 * sin(2π * 2000t)][image6]
 
 **Discussion of Results:**  
 The FFT frequency resolution is determined by:  
@@ -144,14 +144,14 @@ Adaptive freq: 6788 Hz → DMA, period \~0.147 ms → light sleep completely imp
 
 To empirically measure the ESP32 light sleep wake-up latency, a dedicated test was implemented in the TEST\_LightSleep folder. The test enters light sleep for a fixed duration of 10 ms and measures the total elapsed time using micros() before and after esp\_light\_sleep\_start(), subtracting the nominal sleep duration to isolate the wake-up latency. The results show a consistent wake-up latency of approximately 185 µs on average, with a minimum of 164 µs and a maximum of 208 µs, and a jitter of \~44 µs. Based on this measurement, the maximum adaptive sampling frequency that still allows light sleep between consecutive samples is approximately 1/( 2 \* 185µs) ≈ 2700 Hz \- meaning that only signals whose adaptive frequency exceeds 2700 Hz cannot exploit light sleep. From the tested signals, only the 1000+2000 Hz case (adaptive freq \= 6788 Hz) falls above this threshold, while all other signals can fully benefit from light sleep between samples.
 
-![][image7]
+![Results of the test of light sleep wake-up latency][image7]
 
 **Measure of the performance of the system:** 
 
 These two figures below shows the current consumption of the ESP32 over time, where three distinct phases are clearly visible: an initial high-current spike corresponding to the FFT execution and maximum frequency detection, followed by a 5 second sampling window at lower current where the average is computed, and finally a short peak representing the WiFi \+ MQTT transmission of the aggregated value to the broker.  
-![][image8]
+![Plotter of energy consumption of ESP32 for entire system, taken with ina 219 sensor][image8]
 
-![][image9]
+![Another plotter of energy consumption of ESP32][image9]
 
 **Energy Savings of Adaptive Sampling**
 
@@ -161,7 +161,7 @@ These two figures below shows the current consumption of the ESP32 over time, wh
 | **Cpu Active** | Always | 13/1800000 of time  |
 | **Time available for sleep** | \~ 0 ms | \~ 83 ms  |
 | **sleep usable** | No | Only if period \> wakeup latency |
-| **Real consumption** | avg Current \~ 59 mAh | \~ 51 mAh no light sleep\~ 8 mAh with light sleep |
+| **Real consumption** | avg Current \~ 59 mAh | \~ 51 mAh no light sleep\~ 8 mAh with light sleep |
 
 This image below shows the 13Hz adaptive sampling power consumption graph, where there are some peaks that are around 40 \- 50 mA.  
 ![][image10]
@@ -240,18 +240,18 @@ The code I wrote for this assignment was developed by taking inspiration from th
 
 I used LLMs primarily as a debugging aid  whenever I encountered issues such as buffer overflows or other bugs, I would ask for help understanding what type of problem it was and where it might originate. However, in most cases the LLM was not able to directly solve the issue, and the actual fix came from manual debugging and identifying the exact point in the code causing the problem.
 
-[image1]: https://raw.githubusercontent.com/user/repo/main/images/1.png
-[image2]: https://raw.githubusercontent.com/user/repo/main/images/2.png
-[image3]: https://raw.githubusercontent.com/user/repo/main/images/3.png
-[image4]: https://raw.githubusercontent.com/user/repo/main/images/4.png
-[image5]: https://raw.githubusercontent.com/user/repo/main/images/5.png
-[image6]: https://raw.githubusercontent.com/user/repo/main/images/6.png
-[image7]: https://raw.githubusercontent.com/user/repo/main/images/7.png
-[image8]: https://raw.githubusercontent.com/user/repo/main/images/8.png
-[image9]: https://raw.githubusercontent.com/user/repo/main/images/9.png
-[image10]: https://raw.githubusercontent.com/user/repo/main/images/10.png
-[image11]: https://raw.githubusercontent.com/user/repo/main/images/11.png
-[image12]: https://raw.githubusercontent.com/user/repo/main/images/12.png
-[image13]: https://raw.githubusercontent.com/user/repo/main/images/13.png
-[image14]: https://raw.githubusercontent.com/user/repo/main/images/14.png
-[image15]: https://raw.githubusercontent.com/user/repo/main/images/15.png
+[image1]: https://raw.githubusercontent.com/lellosant/Individual-Assignment-IoT-Algorithms-and-Services/main/images/1.png
+[image2]: https://raw.githubusercontent.com/lellosant/Individual-Assignment-IoT-Algorithms-and-Services/main/images/2.png
+[image3]: https://raw.githubusercontent.com/lellosant/Individual-Assignment-IoT-Algorithms-and-Services/main/images/3.png
+[image4]: https://raw.githubusercontent.com/lellosant/Individual-Assignment-IoT-Algorithms-and-Services/main/images/4.png
+[image5]: https://raw.githubusercontent.com/lellosant/Individual-Assignment-IoT-Algorithms-and-Services/main/images/5.png
+[image6]: https://raw.githubusercontent.com/lellosant/Individual-Assignment-IoT-Algorithms-and-Services/main/images/6.png
+[image7]: https://raw.githubusercontent.com/lellosant/Individual-Assignment-IoT-Algorithms-and-Services/main/images/7.png
+[image8]: https://raw.githubusercontent.com/lellosant/Individual-Assignment-IoT-Algorithms-and-Services/main/images/8.png
+[image9]: https://raw.githubusercontent.com/lellosant/Individual-Assignment-IoT-Algorithms-and-Services/main/images/9.png
+[image10]: https://raw.githubusercontent.com/lellosant/Individual-Assignment-IoT-Algorithms-and-Services/main/images/10.png
+[image11]: https://raw.githubusercontent.com/lellosant/Individual-Assignment-IoT-Algorithms-and-Services/main/images/11.png
+[image12]: https://raw.githubusercontent.com/lellosant/Individual-Assignment-IoT-Algorithms-and-Services/main/images/12.png
+[image13]: https://raw.githubusercontent.com/lellosant/Individual-Assignment-IoT-Algorithms-and-Services/main/images/13.png
+[image14]: https://raw.githubusercontent.com/lellosant/Individual-Assignment-IoT-Algorithms-and-Services/main/images/14.png
+[image15]: https://raw.githubusercontent.com/lellosant/Individual-Assignment-IoT-Algorithms-and-Services/main/images/15.png
