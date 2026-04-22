@@ -1,4 +1,9 @@
-**Individual Assignment \- IoT Algorithms and Services 2025-2026**
+## Individual Assignment \- IoT Algorithms and Services 2025-2026
+
+## Projet Info
+Leonardo Santucci,  
+matr. 2282707
+
 
 **Boards used**
 
