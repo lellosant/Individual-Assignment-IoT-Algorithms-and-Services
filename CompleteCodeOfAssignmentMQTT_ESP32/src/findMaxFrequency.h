@@ -13,55 +13,11 @@ float maxFrequency = 0;
 uint32_t sample_rate = MAX_SAMPLE_RATE;
 #define PRECISION 2 //1Hz of precision (sample_rate/SAMPLES)<2
 
+float findMaxFrequency();
+float  getMaxFrequencyformFFT(float* , float* , uint32_t , u_int32_t );
 
 
 
-
-float  getMaxFrequencyformFFT(float* fillReal, float* fillImag, uint32_t samples, u_int32_t sample_rate){
-    uint64_t start = micros();
-    ArduinoFFT<float> FFT = ArduinoFFT<float>(fillReal, fillImag, samples, sample_rate);
-    FFT.windowing(FFT_WIN_TYP_HAMMING, FFT_FORWARD);
-    uint64_t inizialization_time = micros() - start;
-    start = micros();
-    FFT.compute(FFT_FORWARD);
-    FFT.complexToMagnitude();
-    uint64_t fft_calc_time =  micros() - start;
-    int topBin = 0;
-    
-    float maxVal = 0;
-
-    //avg of values
-    float avg = 0;
-    for (int i = 0; i < SAMPLES / 2; i++) {
-      avg += fillReal[i];
-      if (fillReal[i] > maxVal) { maxVal = fillReal[i]; }
-    }
-    avg = avg / ((SAMPLES/2) - 1);
-
-
-    //variance calc
-    float variance = 0;
-    //start for 1 because bin 0 is DC component
-    for (int i = 1; i < SAMPLES/2; i++)
-      variance += (fillReal[i] - avg) * (fillReal[i] - avg);
-
-    variance /= ((SAMPLES/2) - 1);
-    float sigma = sqrtf(variance);
-
-    float threshold = avg + SNR_MULTIPLIER * sigma;
-      //float threshold = avg *(SAMPLES / 32); // Scaled: Peak * (SAMPLES/something)
-      for (int i = (SAMPLES / 2) - 1; i > 0; i--) {
-        if (fillReal[i] > threshold) {
-          topBin = i;
-          break; 
-        }
-      }
-      float f_max = (topBin * sample_rate) / (float)SAMPLES;
-      Serial.printf("FFT compute on %d SAMPLES\nInizialization Time: %d us\nFFT Calculation Time: %d us\nTotal time: %d us\n",SAMPLES, (int)inizialization_time, (int)fft_calc_time, (int)(inizialization_time+fft_calc_time));
-      Serial.printf("Detected Max Freq: %.2f Hz in bin %d\n New Suggested sampling frequency: %.2f Hz\nSAMPLE FREQUENCY=%d\n\n", f_max, topBin, f_max * 2.5, sample_rate);
-      return f_max;
-
-}
 
 
 float findMaxFrequency() {
@@ -107,9 +63,14 @@ float findMaxFrequency() {
       i2s_adc_disable(I2S_NUM);
     
     uint32_t last_sample_rate = sample_rate;  
-    //FFT
+
+
+
+    //FFT ---------
     float freq_detected = getMaxFrequencyformFFT(fillReal, fillImag, SAMPLES, sample_rate);
-    
+    //-------
+
+
     if((sample_rate/SAMPLES)<=PRECISION || last_freq == freq_detected || last_sample_rate == MIN_SAMPLE_RATE){
       // i found the max frequency
       maxFrequency = freq_detected;
@@ -119,16 +80,7 @@ float findMaxFrequency() {
     
     sample_rate = (uint32_t)max((float)(freq_detected * 2.5f), (float)MIN_SAMPLE_RATE); //Shannon Nyquest Theorem
 
-  
-    //i have just do a cycle with same frequency detected 
-    // or last frequency is 1000Hz
-
-   /* if(last_freq == freq_detected || last_sample_rate == MIN_SAMPLE_RATE){
-      
-
-
-    };
-*/
+    
     last_freq = freq_detected;
 
 
@@ -161,4 +113,56 @@ return maxFrequency;
 
 }
 
+
+
+
+float  getMaxFrequencyformFFT(float* fillReal, float* fillImag, uint32_t samples, u_int32_t sample_rate){
+    //------------------------------------------------
+    //FFT
+    //------------------------------------------------
+    uint64_t start = micros();
+    ArduinoFFT<float> FFT = ArduinoFFT<float>(fillReal, fillImag, samples, sample_rate);
+    FFT.windowing(FFT_WIN_TYP_HAMMING, FFT_FORWARD);
+    uint64_t inizialization_time = micros() - start;
+    start = micros();
+    FFT.compute(FFT_FORWARD);
+    FFT.complexToMagnitude();
+    //------------------------------------------------
+    uint64_t fft_calc_time =  micros() - start;
+    int topBin = 0;
+    
+    float maxVal = 0;
+
+    //avg of values
+    float avg = 0;
+    for (int i = 0; i < SAMPLES / 2; i++) {
+      avg += fillReal[i];
+      if (fillReal[i] > maxVal) { maxVal = fillReal[i]; }
+    }
+    avg = avg / ((SAMPLES/2) - 1);
+
+
+    //variance calc
+    float variance = 0;
+    //start for 1 because bin 0 is DC component
+    for (int i = 1; i < SAMPLES/2; i++)
+      variance += (fillReal[i] - avg) * (fillReal[i] - avg);
+
+    variance /= ((SAMPLES/2) - 1);
+    float sigma = sqrtf(variance);
+
+    float threshold = avg + SNR_MULTIPLIER * sigma;
+      //float threshold = avg *(SAMPLES / 32); // Scaled: Peak * (SAMPLES/something)
+      for (int i = (SAMPLES / 2) - 1; i > 0; i--) {
+        if (fillReal[i] > threshold) {
+          topBin = i;
+          break; 
+        }
+      }
+      float f_max = (topBin * sample_rate) / (float)SAMPLES;
+      Serial.printf("FFT compute on %d SAMPLES\nInizialization Time: %d us\nFFT Calculation Time: %d us\nTotal time: %d us\n",SAMPLES, (int)inizialization_time, (int)fft_calc_time, (int)(inizialization_time+fft_calc_time));
+      Serial.printf("Detected Max Freq: %.2f Hz in bin %d\n New Suggested sampling frequency: %.2f Hz\nSAMPLE FREQUENCY=%d\n\n", f_max, topBin, f_max * 2.5, sample_rate);
+      return f_max;
+
+}
 

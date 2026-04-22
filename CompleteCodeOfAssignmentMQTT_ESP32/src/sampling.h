@@ -1,5 +1,7 @@
 void setupDMA(uint32_t sample_freq){
     if(sample_freq>=20000)
+        //set cpu to max frequency 
+        //setCpuFrequencyMhz(F_CPU/1000000U);
         i2s_set_sample_rates(I2S_NUM, sample_freq);
     else
         i2s_set_sample_rates(I2S_NUM, 20000);
@@ -10,6 +12,7 @@ void setupDMA(uint32_t sample_freq){
 void setupADC(){
     i2s_adc_disable(I2S_NUM);
     i2s_driver_uninstall(I2S_NUM);
+    
     adc1_config_width(ADC_WIDTH_BIT_12);
     adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_12);
 }
@@ -40,36 +43,30 @@ float samplingAvgOnWindowDMA(uint32_t sample_freq, uint32_t samples,uint16_t* dm
     return (float)avg / (float)n;
 }
 
+
+
 float samplingAvgOnWindowADC(uint32_t sample_freq, uint32_t samples){
     uint64_t avg = 0;
     uint32_t n = 0; 
-    //uint32_t oldFreq =  getCpuFrequencyMhz();
-    
-    //set cpu to max frequency 
-    //setCpuFrequencyMhz(F_CPU/1000000U);
-    uint32_t period_ms = 1000 / sample_freq; // Risultato: 50ms
-    uint64_t sleepTime = (1000/sample_freq)*1000 - 10000; // us
+
     const TickType_t xFrequency = pdMS_TO_TICKS(1000 / sample_freq);
-    int x = 1000;
+    //uint64_t us = (1000000/sample_freq) - 200; //200 is the approximate latency of wakeUp of light sleep
+
     while (n<samples){
         TickType_t xLastWakeTime = xTaskGetTickCount();
         avg += adc1_get_raw(ADC1_CHANNEL_6); 
         n++;
-        //vTaskDelay(pdMS_TO_TICKS(1000/sample_freq));
-        //light sleep
-        
+
+
+        //1 way is use task delay until, if no other task is running, the Power Manager automatically enters light sleep 
         xTaskDelayUntil(&xLastWakeTime, xFrequency);
         
-        /*if(sleepTime>0){
-            Serial.printf("Light sleep di %d us\n",x);
-            esp_sleep_enable_timer_wakeup(1500);//2.5ms light sleep
-            esp_light_sleep_start();
-            vTaskDelay(pdMS_TO_TICKS(1));
-            x+=100;
-        }*/
+        //2 way is force light sleep, cause issue of wifi connection e MQTT connection
+        //esp_sleep_enable_timer_wakeup(us);
+        //esp_light_sleep_start(); 
+
         
     }
-    //setCpuFrequencyMhz(oldFreq);
      return (float)avg / (float)n;
 }
 

@@ -13,13 +13,13 @@
 #include <PubSubClient.h>
 #include "freertos/queue.h"
 #include "esp_pm.h"
-
+#include "esp_wifi.h"
 
 #define SAVE_ENERGY true
 
 
 
-//SemaphoreHandle_t xSemaphoreFindMaxFrequency;
+
 QueueHandle_t xAvgQueue;
 
 
@@ -51,13 +51,11 @@ void setup() {
   }
   
   initDMAi2s(sample_rate, BUFFER_DMA_SIZE, NR_BUFFER_DMA, I2S_NUM, ADC_UNIT, ADC_CHANNEL);
-  //xSemaphoreFindMaxFrequency = xSemaphoreCreateBinary();
 
   //create a queue that contain max 5 float value for MQTT task
   xAvgQueue = xQueueCreate(5, sizeof(float));
   
   xTaskCreatePinnedToCore(TaskFindMaxFrequency, "MaxFrequency", 32000, NULL, 5, NULL, 1);
-  //xTaskCreatePinnedToCore(TaskSampling, "TaskSampling", 8192, NULL, 5, NULL, 1);
   
 
 }
@@ -76,7 +74,7 @@ void TaskFindMaxFrequency(void *pvParameters){
   //start to sampling and wifi and MQTT connection
   xTaskCreatePinnedToCore(TaskSampling, "TaskSampling", 8192, NULL, 5, NULL, 1);
   xTaskCreatePinnedToCore(TaskWifi, "TaskWifi",4096,NULL,3,NULL, 0 ); //core 0 (wifi work on this core)
-  xTaskCreatePinnedToCore(TaskClientMQTT,"taskClientMQTT",4096,NULL,1,NULL,1);
+  xTaskCreatePinnedToCore(TaskClientMQTT,"taskClientMQTT",4096,NULL,1,NULL,0);
   vTaskDelete(NULL);
 
 }
@@ -127,8 +125,18 @@ void TaskSampling(void *pvParameters){
 void TaskWifi(void *pvParameters){
   Serial.println("\nConnecting to wifi ...");
   //WiFi.setSleep(WIFI_PS_MIN_MODEM); 
-  if(SAVE_ENERGY)
-    WiFi.setSleep(WIFI_PS_MAX_MODEM); //set energy saving max
+  if(SAVE_ENERGY){
+    WiFi.setSleep(WIFI_PS_MAX_MODEM);
+    
+    // Wake up only every 10 beacons (~1s) instead of default 3 (~300ms)
+    wifi_config_t conf;
+    esp_wifi_get_config(WIFI_IF_STA, &conf);
+    conf.sta.listen_interval = 10;
+    esp_wifi_set_config(WIFI_IF_STA, &conf);
+
+    // Reduce TX power 
+    esp_wifi_set_max_tx_power(34); // ~8.5 dBm
+  }
     
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
@@ -141,6 +149,7 @@ void TaskWifi(void *pvParameters){
     //reconnection to wifi if signal lost
     while(WiFi.status() != WL_CONNECTED){
       Serial.println("Connection to wifi is lost, try to reconnect");
+      WiFi.reconnect();
       vTaskDelay(pdMS_TO_TICKS(2000));
     }
     if(SAVE_ENERGY)
@@ -182,18 +191,19 @@ void TaskClientMQTT(void *pvParameters){
             Serial.println("Connected to MQTT broker");
             
             //topic pong
-            client.subscribe(TEST_TOPIC_IN);
+            if(!SAVE_ENERGY)
+              client.subscribe(TEST_TOPIC_IN);
 
           }else{
-            Serial.println(" Failed, retrying in 5 seconds...");
-            vTaskDelay(pdMS_TO_TICKS(5000));
+            Serial.println(" Failed, retrying in 2 seconds...");
+            vTaskDelay(pdMS_TO_TICKS(2000));
             continue; 
         }   
       }
       client.loop();
 
-      // check the queue for max 10 ms
-      if (xQueueReceive(xAvgQueue, &avg, pdMS_TO_TICKS(10)) == pdPASS) {
+      
+      if (xQueueReceive(xAvgQueue, &avg, portMAX_DELAY ) == pdPASS) {
         
         snprintf(msg, sizeof(msg),"{\"device\":\"ESP32_Test\",\"average\":%.2f}\n", avg);
         Serial.printf("Publishing message: %s",msg);
@@ -207,9 +217,9 @@ void TaskClientMQTT(void *pvParameters){
     }
     
     if(SAVE_ENERGY)
-      vTaskDelay(pdMS_TO_TICKS(WINDOW_TIME_SAMPLING_SECONDS*1000));
+      vTaskDelay(pdMS_TO_TICKS(2000));
     else
-      vTaskDelay(pdMS_TO_TICKS(1));
+      vTaskDelay(pdMS_TO_TICKS(1)); //latency mqtt calculation
     
   }
 }
@@ -236,3 +246,4 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
 
 }
+

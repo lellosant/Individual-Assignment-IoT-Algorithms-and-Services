@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <math.h>
 
-#define SAMPLE_RATE     1000
+#define SAMPLE_RATE     100
 #define I2S_NUM         I2S_NUM_0
 #define BUFFER_SIZE     64
 
